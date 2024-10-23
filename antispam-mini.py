@@ -2,6 +2,7 @@ import re
 import logging
 import os
 import emoji
+from functools import wraps
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackContext
@@ -28,9 +29,23 @@ if not os.path.exists(db_main_file):
 db_main = TinyDB(db_main_file)
 User = Query()
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text('Здравствуйте! Я бот, удаляющий спам.\n\nЧтобы начать работу, добавьте меня в чат как администратора с правами на удаление сообщений. Затем используйте команду /register <chat_id> чтобы зарегистрировать чат и начать получать логи удаленных сообщений. Используйте /unregister <chat_id> чтобы отменить регистрацию чата.\n\nИдентификатор чата выглядит примерно так: -100234567890. Чтобы получить такой идентификатор, воспользуйтесь одним из сторонних ботов, например @username_to_id_bot или @getmy_idbot.\n\nВы также можете настроить удаление технических сообщений, см. полный список команд.')
+def is_private_chat(update: Update) -> bool:
+    return update.effective_chat.type == "private"
 
+def private_chat_only(func):
+    @wraps(func)
+    async def wrapped(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
+        if not is_private_chat(update):
+            await update.message.reply_text("Эта команда доступна только в личном чате с ботом.")
+            return
+        return await func(update, context, *args, **kwargs)
+    return wrapped
+
+@private_chat_only
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text('Здравствуйте! Я бот, удаляющий спам.\n\nЧтобы начать работу, добавьте меня в чат как администратора с правами на удаление сообщений. Затем используйте команду /register <chat_id> чтобы зарегистрировать чат и начать получать логи удаленных сообщений. Используйте /unregister <chat_id> чтобы отменить регистрацию чата.\n\nИдентификатор чата выглядит примерно так: -100234567890. Чтобы получить такой идентификатор, воспользуйтесь одним из сторонних ботов, например @username_to_id_bot или @getmy_idbot.\n\nВы также можете настроить удаление технических сообщений со статусами, см. полный список команд.')
+
+@private_chat_only
 async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     
@@ -65,6 +80,7 @@ async def register(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     except BadRequest as e:
         await update.message.reply_text(f'Ошибка: {str(e)}. Проверьте правильность ID чата и убедитесь, что бот добавлен в чат.')
 
+@private_chat_only
 async def unregister(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     
@@ -88,6 +104,7 @@ async def unregister(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     else:
         await update.message.reply_text('Чат не зарегистрирован.')
 
+@private_chat_only
 async def list_chats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     user_data = db_main.get(User.user_id == user_id)
@@ -108,6 +125,7 @@ async def list_chats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     else:
         await update.message.reply_text("У вас нет зарегистрированных чатов.")
 
+@private_chat_only
 async def delete_statuses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     
@@ -138,7 +156,7 @@ async def delete_statuses(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     else:
         await update.message.reply_text('Чат не зарегистрирован.')
 
-
+@private_chat_only
 async def allow_statuses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     
@@ -160,7 +178,7 @@ async def allow_statuses(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 if 'delete_statuses' in user_data:
                     user_data['delete_statuses'][str(chat_id)] = False
                 db_main.update(user_data, User.user_id == user_id)
-                await update.message.reply_text(f'Автоматическое удаление статусов выключено для чата {chat_id}.')
+                await update.message.reply_text(f'Автоматическое удаление статусов отключено для чата {chat_id}.')
             else:
                 await update.message.reply_text('Вы не администратор этого чата.')
         except BadRequest:
@@ -173,16 +191,21 @@ async def handle_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
 
     chat_id = update.effective_chat.id
-    user_id = update.effective_user.id
-    user_data = db_main.get(User.user_id == user_id)
-    if user_data and chat_id in user_data['chats']:
+    
+    # Check if this chat is registered by any user
+    registered_users = db_main.search(User.chats.any([chat_id]))
+    
+    for user_data in registered_users:
         delete_status = user_data.get('delete_statuses', {}).get(str(chat_id), False)
         if delete_status:
             try:
                 await update.effective_message.delete()
+                
             except BadRequest as e:
                 print(f"Не удалось удалить статус в чате {chat_id}: {str(e)}")
-
+            
+            # Break after first successful deletion to avoid multiple attempts
+            break
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     help_text = """
