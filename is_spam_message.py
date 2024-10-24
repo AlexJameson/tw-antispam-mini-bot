@@ -191,15 +191,13 @@ def new_is_spam_message(text):
 
     ]
 
-    # Compile patterns
     main_pattern = re.compile("|".join(main_spam_phrases), re.IGNORECASE | re.DOTALL)
     supporting_pattern = re.compile("|".join(supporting_phrases), re.IGNORECASE | re.DOTALL)
 
-    # Check for main spam patterns
-    has_main = main_pattern.search(text) is not None
-
-    # Check for supporting patterns
-    has_supporting = supporting_pattern.search(text) is not None
-
-    #return has_main and has_supporting 
     return main_pattern.search(text) and supporting_pattern.search(text)
+
+
+def has_mixed_words(text):
+    regex = r"\b(?=[^\s_-]*[а-яА-ЯёЁ]+)[^\s_-]*[^-\sа-яА-ЯёЁ\W\d_]+[^\s_-]*\b"
+    matches = re.findall(regex, text)
+    return matches
