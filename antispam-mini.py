@@ -1,4 +1,3 @@
-import re
 import logging
 import os
 import emoji
@@ -7,7 +6,6 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackContext, CallbackQueryHandler
 from telegram.error import TelegramError, BadRequest, Forbidden
 from tinydb import TinyDB, Query
-from spam_tokens import BETTING_TOKENS
 from is_spam_message import new_is_spam_message, has_critical_patterns, has_mixed_words
 from private_decorator_definition import private_chat_only
 
@@ -418,10 +416,6 @@ async def check_automatically(update: Update, context: CallbackContext):
         return
 
     words = message.text or message.caption
-        
-    betting_pattern = '|'.join(map(re.escape, BETTING_TOKENS))
-    betting_patterns = re.findall(betting_pattern, words)
-    num_betting = len(betting_patterns)
     
     mixed_words = has_mixed_words(words)
     num_mixed = len(mixed_words)
@@ -446,12 +440,11 @@ async def check_automatically(update: Update, context: CallbackContext):
                 chat_title = chat.title if chat.title else f"Chat {chat_id}"
 
                 # Ban automatically
-                if (len(words) < 500) and (("✅✅✅✅" in words or "✅✅✅✅" in words.replace('\U0001F537', '✅') or crit_tokens_bool is True or num_betting > 1 or num_mixed > 1 or spam_tokens is not None or emoji_critical_num is True)):
+                if (len(words) < 500) and (("✅✅✅✅" in words or "✅✅✅✅" in words.replace('\U0001F537', '✅') or (crit_tokens_bool is True and from_user.is_premium is True) or num_mixed > 1 or spam_tokens is not None or emoji_critical_num is True)):
                     verdict = f"""
 <b>Основное регулярное выражению:</b> {spam_tokens is not None}
 <b>Критические токены:</b> {crit_tokens_bool} | {crit_tokens_string}
 <b>Смешанные слова:</b> {num_mixed}; [ {', '.join(mixed_words)} ]
-<b>Гемблинг:</b> {num_betting}; [ {', '.join(betting_patterns)} ]
 <b>Более 12 эмодзи:</b> {emoji_critical_num}
             """
                     if message.text is not None:
@@ -499,7 +492,7 @@ async def check_automatically(update: Update, context: CallbackContext):
                                 caption=error_message,
                                 parse_mode="HTML")
                             return
-            except Exception as e:
+            except TelegramError as e:
                 print(f"Ошибка при обработке сообщения: {str(e)}")
         else:
             print(f"{message}")
