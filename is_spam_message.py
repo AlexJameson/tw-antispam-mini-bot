@@ -35,6 +35,7 @@ def has_critical_patterns(text):
         r"(?=.*\bонлайн\b)(?=.*\bзанятость\b)",
         # "До 1200$ в неделю","от 400 баксов в неделю","От 1000$ в неделю","от 900 долларов в неделю","от $700 в неделю", "Доход от 300 длр в день", "от +300$ в день", "до 1200 баксов в день"
         r"(?i)(?:от|до)\s*(?:\$?\s*\d+(?:[.,]\d+)?|\d+(?:[.,]\d+)?\s*(?:баксов|долларов|длр|USD|\$))(?:\s*[.,])?\s+в\s+(?:неделю|день)",
+        r"(?i)\d+\/неделю[\s\S]*",
         
 		  # Gambling
         r"jeton_games",
@@ -55,7 +56,7 @@ def has_critical_patterns(text):
         r"\bсобраны\s+все\s+сливы\b",
         r"\bдевушек\s+твоего\s+города\b",
         r"\bинтимны[ех]\s+фото\w*",
-        r"\bобнаж[её]нны[ех]\s+фото\w*",
+        r"\bобнаж[её]нны[ех]\s+фото\w*"
 	 ]
     crit_pattern = re.compile("|".join(crit_spam_phrases), re.IGNORECASE | re.DOTALL)
     has_crit = crit_pattern.search(text)
@@ -155,11 +156,11 @@ def new_is_spam_message(text):
         r"\bслитые\s+фото\b",
         r"\bслив\s+фото",
         r"\bсливы\b",
-        r"\bслив\b"
+        r"\bслив\b",
         
 		  # Gambling
-        r"\bбукмекер\b"
-	     r"\bвыигрыш\b"
+        r"\bбукмекер\b",
+	     r"\bвыигрыш\b",
     ]
 
     supporting_phrases = [
@@ -212,7 +213,7 @@ def new_is_spam_message(text):
         
 		  # To catch adult leak bots
 		  r"\bдевуш(?:ек|ки)\b",
-        r"\bличные\s+переписки\b",
+        r"\bличные\s+переписки\b"
     ]
 
     # Compile patterns
