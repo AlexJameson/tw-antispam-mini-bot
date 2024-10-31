@@ -55,8 +55,9 @@ def has_critical_patterns(text):
         r"\bсобраны\s+все\s+сливы\b",
         r"\bдевушек\s+твоего\s+города\b",
         r"\bинтимны[ех]\s+фото\w*",
+        r"\bинтимны[ех]\s+фото\b",
         r"\bобнаж[её]нны[ех]\s+фото\w*"
-        r"\bинтим\s+фото\w*",
+        r"\bинтим\s+фото\b",
 
 	 ]
     crit_pattern = re.compile("|".join(crit_spam_phrases), re.IGNORECASE | re.DOTALL)
