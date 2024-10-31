@@ -1,7 +1,8 @@
 # Gatekeeper: Telegram-бот для удаления спама
 
 Ссылка: https://t.me/tw_antispam_mini_bot
-Версия% `v0.1.1`
+
+Версия: `v0.1.2`
 
 ## Введение
 
