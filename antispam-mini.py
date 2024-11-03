@@ -433,6 +433,9 @@ async def check_automatically(update: Update, context: CallbackContext):
     else:
         emoji_critical_num = False
 
+    is_reply = message.reply_to_message is not None
+    is_premium = from_user.is_premium is not None
+	 
     for user in db_main.all():
         if chat_id in user['chats']:
             try:
@@ -440,7 +443,9 @@ async def check_automatically(update: Update, context: CallbackContext):
                 chat_title = chat.title if chat.title else f"Chat {chat_id}"
 
                 # Ban automatically
-                if (len(words) < 500) and (("✅✅✅✅" in words or "✅✅✅✅" in words.replace('\U0001F537', '✅') or (crit_tokens_bool is True and from_user.is_premium is True) or num_mixed > 1 or spam_tokens is not None or emoji_critical_num is True)):
+                # todo: add repeated emojis check
+
+                if (len(words) < 500 and is_premium is True and is_reply is False) and (("✅✅✅✅" in words or "✅✅✅✅" in words.replace('\U0001F537', '✅') or (crit_tokens_bool is True ) or num_mixed > 1 or spam_tokens is not None or emoji_critical_num is True)):
                     verdict = f"""
 <b>Основное регулярное выражению:</b> {spam_tokens is not None}
 <b>Критические токены:</b> {crit_tokens_bool} | {crit_tokens_string}
